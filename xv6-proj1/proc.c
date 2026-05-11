@@ -149,6 +149,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  p->priority = 5;
 
   release(&ptable.lock);
 }
@@ -199,6 +200,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->priority = curproc->priority;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -542,9 +544,13 @@ setnice(int pid, int nice)
     struct proc *p;
     acquire(&ptable.lock);
 
-    /* ******************** */
-    /* * WRITE YOUR CODE    */
-    /* ******************** */
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == pid){
+        p->priority = nice;
+        release(&ptable.lock);
+        return 0;
+      }
+    }
 
     release(&ptable.lock);
     return -1;
@@ -556,9 +562,13 @@ getnice(int pid)
     struct proc *p;
     acquire(&ptable.lock);
     
-    /* ******************** */
-    /* * WRITE YOUR CODE    */
-    /* ******************** */
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == pid){
+        int nice = p->priority;
+        release(&ptable.lock);
+        return nice;
+      }
+    }
 
     release(&ptable.lock);
     return -1;
@@ -570,11 +580,32 @@ ps(void)
     struct proc *p;
     acquire(&ptable.lock);
     cprintf("name\tpid\tppid\tmem\tprio\tstate\n");
-
-    /* ******************** */
-    /* * WRITE YOUR CODE    */
-    /* ******************** */
-
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == UNUSED)
+          continue;
+        char *state;
+        switch (p->state) {
+            case EMBRYO:
+              state = "EMBRYO";
+              break;
+            case SLEEPING:
+              state = "SLEEPING";
+              break;
+            case RUNNABLE:
+              state = "RUNNABLE";
+              break;
+            case RUNNING:
+              state = "RUNNING";
+              break;
+            case ZOMBIE:
+              state = "ZOMBIE";
+              break;
+            default:
+              state = "UNKNOWN";
+              break;
+        }
+        cprintf("%s\t%d\t%d\t%d\t%d\t%s\n", p->name, p->pid, p->parent ? p->parent->pid : -1, p->sz, p->priority, state);
+    }
     release(&ptable.lock);
     return;
 }
