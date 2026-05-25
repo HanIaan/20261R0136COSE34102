@@ -140,7 +140,8 @@ dec_refcount(uint pa)
 {
     if(kmem.use_lock)
         acquire(&kmem.lock);
-    pmem.refcount[pa >> PGSHIFT]--;
+    if(pmem.refcount[pa >> PGSHIFT] > 0)
+        pmem.refcount[pa >> PGSHIFT]--;
     if(kmem.use_lock)
         release(&kmem.lock);
   return;
