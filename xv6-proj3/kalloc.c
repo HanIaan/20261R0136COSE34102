@@ -71,20 +71,20 @@ kfree(char *v)
   if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
     panic("kfree");
 
+  if(kmem.use_lock)
+    acquire(&kmem.lock);
+  uint pa = V2P(v);
+  if(pmem.refcount[pa >> PGSHIFT] > 0)
+    pmem.refcount[pa >> PGSHIFT]--;
+    
+  if (pmem.refcount[pa >> PGSHIFT] > 0) {
     if (kmem.use_lock)
-        acquire(&kmem.lock);
-    uint pa = V2P(v);
-    if(pmem.refcount[pa >> PGSHIFT] > 0)
-        pmem.refcount[pa >> PGSHIFT]--;
+      release(&kmem.lock);
+    return;
+  }
    
-    if (pmem.refcount[pa >> PGSHIFT] > 0) {
-        if (kmem.use_lock)
-            release(&kmem.lock);
-        return;
-    }
-   
-    if (kmem.use_lock)
-        release(&kmem.lock);
+  if (kmem.use_lock)
+    release(&kmem.lock);
     
   // Fill with junk to catch dangling refs.
   memset(v, 1, PGSIZE);
@@ -112,12 +112,12 @@ kalloc(void)
   if(kmem.use_lock)
     acquire(&kmem.lock);
   r = kmem.freelist;
-    if(r) {
-        kmem.freelist = r->next;
-        pmem.num_free_pages--;
+  if(r) {
+    kmem.freelist = r->next;
+    pmem.num_free_pages--;
         
-        pmem.refcount[V2P((char*)r) >> PGSHIFT] = 1;
-    }
+    pmem.refcount[V2P((char*)r) >> PGSHIFT] = 1;
+  }
   if(kmem.use_lock)
     release(&kmem.lock);
   return (char*)r;
@@ -132,33 +132,33 @@ freemem(void)
 uint
 get_refcount(uint pa)
 {
-    uint count;
-    if (kmem.use_lock)
-        acquire(&kmem.lock);
-    count = pmem.refcount[pa >> PGSHIFT];
-    if(kmem.use_lock)
-        release(&kmem.lock);
-    return count;
+  uint count;
+  if (kmem.use_lock)
+    acquire(&kmem.lock);
+  count = pmem.refcount[pa >> PGSHIFT];
+  if(kmem.use_lock)
+    release(&kmem.lock);
+  return count;
 }
 
 void
 inc_refcount(uint pa)
 {
-    if(kmem.use_lock)
-        acquire(&kmem.lock);
-    pmem.refcount[pa >> PGSHIFT]++;
-    if(kmem.use_lock)
-        release(&kmem.lock);
+  if(kmem.use_lock)
+    acquire(&kmem.lock);
+  pmem.refcount[pa >> PGSHIFT]++;
+  if(kmem.use_lock)
+    release(&kmem.lock);
 }
 
 void  
 dec_refcount(uint pa)
 {
-    if(kmem.use_lock)
-        acquire(&kmem.lock);
-    if(pmem.refcount[pa >> PGSHIFT] > 0)
-        pmem.refcount[pa >> PGSHIFT]--;
-    if(kmem.use_lock)
-        release(&kmem.lock);
+  if(kmem.use_lock)
+    acquire(&kmem.lock);
+  if(pmem.refcount[pa >> PGSHIFT] > 0)
+    pmem.refcount[pa >> PGSHIFT]--;
+  if(kmem.use_lock)
+    release(&kmem.lock);
   return;
 }
