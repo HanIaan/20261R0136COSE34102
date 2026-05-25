@@ -128,7 +128,11 @@ get_refcount(uint pa)
 void
 inc_refcount(uint pa)
 {
-  return;
+    if(kmem.use_lock)
+        acquire(&kmem.lock);
+    pmem.refcount[pa >> PGSHIFT]++;
+    if(kmem.use_lock)
+        release(&kmem.lock);
 }
 
 void  
