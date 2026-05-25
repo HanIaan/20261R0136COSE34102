@@ -117,7 +117,7 @@ uint
 get_refcount(uint pa)
 {
     uint count;
-    if(kmem.use_lock)
+    if (kmem.use_lock)
         acquire(&kmem.lock);
     count = pmem.refcount[pa >> PGSHIFT];
     if(kmem.use_lock)
@@ -138,5 +138,10 @@ inc_refcount(uint pa)
 void  
 dec_refcount(uint pa)
 {
+    if(kmem.use_lock)
+        acquire(&kmem.lock);
+    pmem.refcount[pa >> PGSHIFT]--;
+    if(kmem.use_lock)
+        release(&kmem.lock);
   return;
 }
