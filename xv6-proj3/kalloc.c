@@ -112,11 +112,12 @@ kalloc(void)
   if(kmem.use_lock)
     acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
-    kmem.freelist = r->next;
-
-  pmem.num_free_pages--;
-
+    if(r) {
+        kmem.freelist = r->next;
+        pmem.num_free_pages--;
+        
+        pmem.refcount[V2P((char*)r) >> PGSHIFT] = 1;
+    }
   if(kmem.use_lock)
     release(&kmem.lock);
   return (char*)r;
